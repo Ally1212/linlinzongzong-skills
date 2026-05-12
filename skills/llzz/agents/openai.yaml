@@ -1,0 +1,7 @@
+interface:
+  display_name: "林林总总"
+  short_description: "轻量整理碎片内容并写入 Obsidian 的林林总总目录。"
+  default_prompt: "用 $llzz 把这段内容整理到林林总总。"
+
+policy:
+  allow_implicit_invocation: true
