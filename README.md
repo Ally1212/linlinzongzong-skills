@@ -14,10 +14,19 @@
 - 根据主题把新记录放进 Obsidian 的合适文件。
 - 当旧文件过大时，自动拆成新文件，避免单个笔记越来越臃肿。
 
-默认写入的 Obsidian 目录是：
+写入的 Obsidian 目录不写死，技能每次运行时会自动搜寻本机 Obsidian vault：
 
-```text
-/Users/ziheng/Library/Mobile Documents/iCloud~md~obsidian/Documents/笔记个人/林林总总
+1. 解析 `~/Library/Application Support/obsidian/obsidian.json` 中注册的 vault（按最近使用排序）。
+2. 扫描 iCloud Obsidian 容器 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/*`。
+3. 扫描 `~/Documents`、`~/Obsidian`、`~/Notes` 等常见目录。
+4. 第一个含 `林林总总` 子目录的 vault 即为目标；都没有时使用最近使用的 vault 并创建该目录。
+
+定位结果缓存到 `~/.config/llzz/target-dir`，也可用环境变量 `LLZZ_DIR` 显式覆盖。
+
+手动执行定位：
+
+```bash
+zsh skills/llzz/scripts/find-vault.sh --rescan
 ```
 
 ## 目录结构
@@ -30,13 +39,16 @@ llzz-skill/
 └── skills/
     └── llzz/
         ├── SKILL.md
+        ├── scripts/
+        │   └── find-vault.sh
         └── agents/
             └── openai.yaml
 ```
 
 说明：
 
-- `skills/llzz/SKILL.md` 是技能主体，包含触发条件、工作流、文件选择规则和写入格式。
+- `skills/llzz/SKILL.md` 是技能主体，包含触发条件、目录定位流程、文件选择规则和写入格式。
+- `skills/llzz/scripts/find-vault.sh` 自动定位本机 Obsidian 中的“林林总总”目录。
 - `skills/llzz/agents/openai.yaml` 是技能的 UI 元数据，用于展示名称、简介和默认 prompt。
 - `scripts/install.sh` 用于把项目里的技能安装或同步到本机 Codex 技能目录。
 
@@ -275,10 +287,10 @@ test -f /Users/ziheng/.codex/skills/llzz/agents/openai.yaml
 sed -n '1,40p' /Users/ziheng/.codex/skills/llzz/SKILL.md
 ```
 
-检查 Obsidian 目标目录：
+检查 Obsidian 目标目录定位：
 
 ```bash
-test -d "/Users/ziheng/Library/Mobile Documents/iCloud~md~obsidian/Documents/笔记个人/林林总总"
+zsh /Users/ziheng/.codex/skills/llzz/scripts/find-vault.sh --rescan
 ```
 
 ## 使用建议

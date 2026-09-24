@@ -7,13 +7,37 @@ description: 当用户说“林林总总”、`llzz`、“记到林林总总”�
 
 ## Goal
 
-把用户给出的零散内容轻量整理后，写入本地 Obsidian vault `笔记个人` 的 `林林总总` 目录。这个技能强调“随手记但可回看”：保留原意和现场感，只做必要结构化。
+把用户给出的零散内容轻量整理后，写入本机 Obsidian vault 的 `林林总总` 目录。这个技能强调“随手记但可回看”：保留原意和现场感，只做必要结构化。
 
-默认目录：
+目标目录不写死，每次写入前先按“定位目标目录”流程自动搜寻本机 Obsidian vault。
 
-```text
-/Users/ziheng/Library/Mobile Documents/iCloud~md~obsidian/Documents/笔记个人/林林总总
-```
+## Locate target directory
+
+写入前必须先定位“林林总总”目录，按以下顺序执行：
+
+1. 运行技能自带脚本（推荐，stdout 即目标路径）：
+
+   ```bash
+   zsh scripts/find-vault.sh
+   ```
+
+   路径相对于本 SKILL.md 所在目录解析。若目标目录不存在需要创建，加 `--create`；怀疑路径变更，加 `--rescan`。
+
+2. 脚本不可用时手动搜寻，优先级从高到低：
+
+   - 解析 `~/Library/Application Support/obsidian/obsidian.json` 中注册的 vault 路径（按 `ts` 最近使用排序）。
+   - 扫描 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents/*`。
+   - 扫描 `~/Documents`、`~/Obsidian`、`~/Notes` 等常见目录。
+   - 以上目录中含 `.obsidian` 子目录的才是有效 vault。
+
+3. 选择规则：
+
+   - 第一个含有 `林林总总` 子目录的 vault 即为目标。
+   - 所有 vault 都没有 `林林总总` 时，使用最近使用的 vault 下的 `林林总总`，首次写入时创建该目录。
+   - 找到多个候选且无法判断时，列出候选让用户确认，不要静默选错 vault。
+
+4. 定位结果缓存到 `~/.config/llzz/target-dir`；缓存失效时自动重新扫描。
+5. 回复用户时说明最终写入的是哪个 vault 的哪个文件。
 
 ## Use when
 
@@ -30,12 +54,13 @@ Do not use when:
 
 ## Workflow
 
-1. 只基于当前用户提供的内容整理，不混入历史会话。
-2. 如输入是图片，先转写可辨识文字；不确定文字标注“疑似”，不要编造。
-3. 读取 `林林总总` 目录下现有 Markdown 文件列表，并尽量读取候选文件的标题、frontmatter、一级/二级标题和最近内容。
-4. 根据“文件选择规则”决定追加旧文件或新建文件。
-5. 使用 Obsidian Flavored Markdown 写入内容。
-6. 写入后验证文件存在，并回复保存路径和 1-3 条整理摘要。
+1. 按“定位目标目录”流程确定本次写入的 `林林总总` 目录绝对路径。
+2. 只基于当前用户提供的内容整理，不混入历史会话。
+3. 如输入是图片，先转写可辨识文字；不确定文字标注“疑似”，不要编造。
+4. 读取目标目录下现有 Markdown 文件列表，并尽量读取候选文件的标题、frontmatter、一级/二级标题和最近内容。
+5. 根据“文件选择规则”决定追加旧文件或新建文件。
+6. 使用 Obsidian Flavored Markdown 写入内容。
+7. 写入后验证文件存在，并回复保存路径和 1-3 条整理摘要。
 
 ## File selection rules
 
@@ -171,10 +196,11 @@ tags:
 
 - `test -f "<path>"`
 - `wc -l "<path>"`
-- `obsidian vault="笔记个人" file path="林林总总/<file>.md"`
+- `obsidian vault="<vault 名>" file path="林林总总/<file>.md"`
 
 回复用户时说明：
 
+- 最终定位到的 Obsidian vault 和目标目录。
 - 写入了哪个文件。
 - 是追加旧文件还是新建文件。
 - 为什么这么判断，控制在一句话内。
