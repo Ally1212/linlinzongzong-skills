@@ -1,6 +1,6 @@
 interface:
   display_name: "林林总总"
-  short_description: "轻量整理碎片内容并写入 Obsidian 的林林总总目录。"
+  short_description: "以笔记地图为规则大脑，读写和整理 Obsidian 笔记。"
   default_prompt: "用 $llzz 把这段内容整理到林林总总。"
 
 policy:

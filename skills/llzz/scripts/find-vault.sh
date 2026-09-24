@@ -1,50 +1,47 @@
 #!/usr/bin/env zsh
-# find-vault.sh — 在本机自动定位 Obsidian 中“林林总总”目录
+# find-vault.sh — 在本机自动定位 Obsidian vault 根目录（以“笔记地图”为锚点）
 #
 # 用法:
-#   find-vault.sh             输出目标目录绝对路径到 stdout
-#   find-vault.sh --rescan    忽略缓存重新扫描
-#   find-vault.sh --create    目标目录不存在时自动创建
+#   find-vault.sh           输出 vault 根目录绝对路径到 stdout
+#   find-vault.sh --rescan  忽略缓存重新扫描
 #
 # 优先级:
-#   1. 环境变量 LLZZ_DIR（显式覆盖）
-#   2. 缓存文件 ~/.config/llzz/target-dir
+#   1. 环境变量 LLZZ_VAULT（显式覆盖）
+#   2. 缓存文件 ~/.config/llzz/vault-root
 #   3. Obsidian 注册的 vault（obsidian.json，按最近使用排序）
 #   4. iCloud Obsidian 容器下的 vault
 #   5. 常见本地目录下含 .obsidian 的 vault
 #
-# 找到含“林林总总”子目录的 vault 即返回；若所有 vault 都没有该子目录，
-# 返回最近使用的 vault 下的“林林总总”路径（配合 --create 会自动创建）。
+# 选择规则: 第一个含“笔记地图.md”的 vault 即为目标；
+# 若所有 vault 都没有笔记地图，返回最近使用的 vault（由技能走初始化流程）。
 
 set -euo pipefail
 
-TARGET_NAME="林林总总"
-CACHE_FILE="${LLZZ_CACHE:-$HOME/.config/llzz/target-dir}"
+MAP_NAME="笔记地图.md"
+CACHE_FILE="${LLZZ_CACHE:-$HOME/.config/llzz/vault-root}"
 RESCAN=0
-CREATE=0
 
 for arg in "$@"; do
   case "$arg" in
     --rescan) RESCAN=1 ;;
-    --create) CREATE=1 ;;
     *) echo "未知参数: $arg" >&2; exit 2 ;;
   esac
 done
 
 # 1. 显式覆盖
-if [[ -n "${LLZZ_DIR:-}" ]]; then
-  if [[ ! -d "$LLZZ_DIR" ]]; then
-    echo "LLZZ_DIR 指向的目录不存在: $LLZZ_DIR" >&2
+if [[ -n "${LLZZ_VAULT:-}" ]]; then
+  if [[ ! -d "$LLZZ_VAULT" ]]; then
+    echo "LLZZ_VAULT 指向的目录不存在: $LLZZ_VAULT" >&2
     exit 1
   fi
-  echo "${LLZZ_DIR%/}"
+  echo "${LLZZ_VAULT%/}"
   exit 0
 fi
 
 # 2. 缓存
 if [[ $RESCAN -eq 0 && -f "$CACHE_FILE" ]]; then
   cached="$(head -1 "$CACHE_FILE")"
-  if [[ -d "$cached" ]]; then
+  if [[ -d "$cached" && -d "$cached/.obsidian" ]]; then
     echo "$cached"
     exit 0
   fi
@@ -98,7 +95,7 @@ done
 
 if [[ ${#vaults[@]} -eq 0 ]]; then
   echo "未找到任何 Obsidian vault（未发现 .obsidian 目录）" >&2
-  echo "可用 LLZZ_DIR=<路径> 手动指定“$TARGET_NAME”目录" >&2
+  echo "可用 LLZZ_VAULT=<路径> 手动指定 vault 根目录" >&2
   exit 1
 fi
 
@@ -107,23 +104,19 @@ for v in "${vaults[@]}"; do
   echo "  - $v" >&2
 done
 
-# 4. 优先选择已有“林林总总”子目录的 vault
+# 4. 优先选择含“笔记地图.md”的 vault
 target=""
 for v in "${vaults[@]}"; do
-  if [[ -d "$v/$TARGET_NAME" ]]; then
-    target="$v/$TARGET_NAME"
+  if [[ -f "$v/$MAP_NAME" ]]; then
+    target="$v"
     break
   fi
 done
 
-# 5. 都没有 → 使用最近使用的 vault，目标目录待创建
+# 5. 都没有 → 使用最近使用的 vault（技能应走笔记地图初始化流程）
 if [[ -z "$target" ]]; then
-  target="${vaults[1]}/$TARGET_NAME"
-  echo "没有 vault 含“$TARGET_NAME”目录，将使用最近使用的 vault: $target" >&2
-  if [[ $CREATE -eq 1 ]]; then
-    mkdir -p "$target"
-    echo "已创建目录: $target" >&2
-  fi
+  target="${vaults[1]}"
+  echo "没有 vault 含“$MAP_NAME”，使用最近使用的 vault（需初始化笔记地图）: $target" >&2
 fi
 
 # 6. 写入缓存并输出
